@@ -1,0 +1,72 @@
+
+                         ┌────────────────────┐
+                         │ txt2tags.class.php │
+                         └────────────────────┘
+
+Written by (c) Petko Yotov 2012 www.pmwiki.org/Petko
+
+Development sponsored by Eric Forgeot.
+
+txt2tags is a lightweight markup language created by
+Aurelio Jargas and written in Python (www.txt2tags.org).
+
+This class here attempts to transpose some of the features
+of the Python convertor to the PHP language.
+
+Most of this script was written by Petko Yotov except:
+
+ ⁃ functions PSS(), Keep(), Restore(), RegExp $UEX based on
+    the PmWiki engine by Patrick R. Michaud www.pmichaud.com
+ ⁃ the RegExp $imgrx based on txt2tags.py by Aurelio Jargas
+
+This text is Free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 3
+of the License, or (at your option) any later version.
+See http://www.gnu.org/copyleft/gpl.html for full details
+and lack of warranty.
+
+
+How to use this script
+══════════════════════
+
+This class should be included from other scripts, for example:
+
+    # load the class
+    require_once('txt2tags.class.php');
+    
+    ## initialize a new T2T object: two ways
+    
+    # either with an existing disk file:
+    $x = new T2T("test.t2t", true);
+    
+    # or with a variable containing the entire T2T markup:
+    $x = new T2T($page["text"]);
+    
+    # optional: some settings, after new/init, before go()
+    $x->enabletoc = 1;
+    $x->enableinclude = 1;
+    $x->snippets['**'] = "<strong>%s</strong>"; # instead of <b>
+    
+    # run all processing
+    $x->go();
+    
+    # get the complete HTML output including <head>
+    $html = $x->fullhtml;
+    
+    # alternatively, get some other variables:
+    $body = $x->bodyhtml;     # only the part inside the <body> tags
+    $fullconfig = $x->config; # what was in the "config" area of the file?
+
+
+Notes
+═════
+
+ ⁃ This is an early public release, ready to be tested.
+ ⁃ Including disk files is disabled out of the box, because of
+    potential vulnerabilities. Enabling it on systems where
+    untrusted people could edit the t2t content is not recommended.
+    A future version may allow the inclusion of files from the
+    current directory or only with *.t2t extension.
+    To enable inclusions, use $x->enableinclude = 1;
+
