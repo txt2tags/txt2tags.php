@@ -1,10 +1,10 @@
-<?php $T2TVersion = "20161216";
+<?php $T2TVersion = "20130924";
 /**
   txt2tags.class.php
 
-  This version is for PHP >= 5.3
+  This version is for PHP < 7
 
-  Written by (c) Petko Yotov 2012 www.pmwiki.org/petko
+  Written by (c) Petko Yotov 2012 www.pmwiki.org/Petko
   Development sponsored by Eric Forgeot.
   
   txt2tags is a lightweight markup language created by 
@@ -163,12 +163,6 @@ class T2T {
   var $KPV = array();
   var $KPCount = 0;
   var $csslink = '';
-  
-  
-  public function __construct($input, $isfile = 0) {
-    $this->T2T($input, $isfile);
-  }
-  
   function T2T($input, $isfile = 0) {    
     
     $this->set_macros($input, $isfile);     # macros
@@ -225,15 +219,15 @@ class T2T {
           case "encoding" : $this->encoding = trim($val); break;
           case "style" : $this->csslink = sprintf($this->snippets['cssfile'], trim($val)); 
           case "preproc"  : 
-            if ($this->enableproc == 1) {
-              $this->preproc[]  = $this->add_proc($setting, trim($val)); 
-              break;
-            }
-                case "postproc" : 
-            if ($this->enableproc == 1) {
-              $this->postproc[] = $this->add_proc($setting, trim($val)); 
-              break;
-            }
+			if ($this->enableproc == 1) {
+				$this->preproc[]  = $this->add_proc($setting, trim($val)); 
+				break;
+			}
+          case "postproc" : 
+			if ($this->enableproc == 1) {
+				$this->postproc[] = $this->add_proc($setting, trim($val)); 
+				break;
+			}
           case "options": 
             if(strpos(" $val", '--mask-email')) $this->maskemail = 1;
             if(preg_match('/--toc(?!-)/', $val)) $this->enabletoc = 1;
@@ -598,6 +592,7 @@ class T2T {
   }
   
   function run_inline($line) { # inline transformations (links, images, bold, mono...)
+    $snippets = $this->snippets;
     # inline Raw, Mono, Tagged
     if(preg_match_all('/(\'|"|`){2}([^\\s](.*?[^\\s])?\\1*)\\1\\1/', $line, $m, PREG_SET_ORDER)) {
       foreach($m as $a) {
@@ -613,65 +608,54 @@ class T2T {
     # <[img]>
     $imgrx = "\\[([\034\\w_,.+%$#@!?+~\\/-]+\\.(?:png|jpe?g|gif|bmp))\\]";
     
-    
-    $that = $this;
-    
-    $line = preg_replace_callback("/^$imgrx(?=.)/i",
-      function($m) use ($that) { return $that->Keep(sprintf($that->snippets['img'], 'left', $m[1])); }, $line);
-    $line =  preg_replace_callback("/(?<=.)$imgrx$/i",
-      function($m) use ($that) { return $that->Keep(sprintf($that->snippets['img'], 'right', $m[1])); }, $line);
+    $line = preg_replace("/^$imgrx(?=.)/ei",
+      "\$this->Keep(sprintf(\$snippets['img'], 'left', '$1'))", $line);
+    $line = preg_replace("/(?<=.)$imgrx$/ei",
+      "\$this->Keep(sprintf(\$snippets['img'], 'right', '$1'))", $line);
       
-    $line =  preg_replace_callback("/$imgrx/i",
-      function($m) use ($that) { return $that->Keep(sprintf($that->snippets['img'], 'right', $m[1])); }, $line);
+      
+    $line = preg_replace("/$imgrx/ei",
+      "\$this->Keep(sprintf(\$snippets['img'], 'middle', '$1', 'middle'))", $line);
     
     $UEX = '<>"{}|\\\\^`()\\[\\]\''; # UrlExcludeChars
     $PRT = '(?:https?|ftp|news|telnet|gopher|wais|mailto):';
     
     if ($this->enablehotlinks == 0) {
-    $Links = array(
-      "{$PRT}[^\\s$UEX]+" =>'',
-      "www\\d?\\.[^\\s$UEX]+" =>'http://', # lazy links
-      "ftp\\d?\\.[^\\s$UEX]+" =>'ftp://',  # lazy links
-      "\\w[\\w.-]+@[\\w-.]+[^\\s$UEX]+" =>'mailto:',  # lazy links
-      ); #     
+		$Links = array(
+		  "{$PRT}[^\\s$UEX]+" =>'',
+		  "www\\d?\\.[^\\s$UEX]+" =>'http://', # lazy links
+		  "ftp\\d?\\.[^\\s$UEX]+" =>'ftp://',  # lazy links
+		  "\\w[\\w.-]+@[\\w-.]+[^\\s$UEX]+" =>'mailto:',  # lazy links
+			); #     
     }
     else {
-    $Links = array(
-      //"{$PRT}[^\\s$UEX]+" =>'',  # allows hotlinks by disabling this part
-      //"www\\d?\\.[^\\s$UEX]+" =>'http://', # lazy links won't work here
-      "ftp\\d?\\.[^\\s$UEX]+" =>'ftp://',  # lazy links
-      "\\w[\\w.-]+@[\\w-.]+[^\\s$UEX]+" =>'mailto:',  # lazy links
-      ); #  
-  }
+		$Links = array(
+		  //"{$PRT}[^\\s$UEX]+" =>'',  # allows hotlinks by disabling this part
+		  //"www\\d?\\.[^\\s$UEX]+" =>'http://', # lazy links won't work here
+		  "ftp\\d?\\.[^\\s$UEX]+" =>'ftp://',  # lazy links
+		  "\\w[\\w.-]+@[\\w-.]+[^\\s$UEX]+" =>'mailto:',  # lazy links
+			); #  
+	}
     
     # [txt link], [txt #anchor]
     foreach($Links as $k=>$v) {
-      $line =  preg_replace_callback("/\\[([^\\]]+?) +($k)\\]/i", 
-        function($m) use ($that, $v) { 
-          return $that->Keep(
-            sprintf($that->snippets['link'], $that->esc($v.$m[2]), $that->esc($m[1], 1))
-            ); } , $line);
+      $line = preg_replace("/\\[([^\\]]+?) +($k)\\]/ei", 
+        "\$this->Keep(sprintf(\$snippets['link'], \$this->esc('$v$2'), \$this->esc('$1', 1)))", $line);
     }
     # local links
-    $line =  preg_replace_callback("/\\[([^\\]]+?) +([^\\s$UEX]+)\\]/i", 
-      function($m) use ($that) { 
-        return $this->Keep(sprintf($that->snippets['link'], $that->esc($m[2]), $that->esc($m[1], 1)));
-      } , $line);
+    $line = preg_replace("/\\[([^\\]]+?) +([^\\s$UEX]+)\\]/ei", 
+      "\$this->Keep(sprintf(\$snippets['link'], \$this->esc('$2'), \$this->esc('$1', 1)))", $line);
     
     # free links www.link, e@mail, http://link
     foreach($Links as $k=>$v) {
       if($v=='mailto:' && $this->maskemail) {
-        $line = preg_replace_callback("/\\b({$k}[^\\s.,?!$UEX])/i",
-          function($m) use ($that) { 
-            return $that->Keep('&lt;' . str_replace(array('@', '.'), array(' (a) ', ' '), $m[1]).'&gt;'.$m[2]); }, 
-            $line); 
+        $line = preg_replace("/\\b({$k}[^\\s.,?!$UEX])/ei",
+          "\$this->Keep('&lt;' . str_replace(array('@', '.'), array(' (a) ', ' '), '$1') . '&gt;$2')", $line);
       }
-          
       else {
-        $line =  preg_replace_callback("/\\b({$k}[^\\s.,?!$UEX])/i", 
-          function($m) use ($that, $v) { return $that->Keep(sprintf($that->snippets['link'], $that->esc($v.$m[1]), $that->esc($m[1]))); },
-          $line);
-      }
+        $line = preg_replace("/\\b({$k}[^\\s.,?!$UEX])/ei", 
+          "\$this->Keep(sprintf(\$snippets['link'], \$this->esc('$v$1'), \$this->esc('$1')))", $line);
+	  }
     }
     
     $line = $this->esc($line);
@@ -680,9 +664,8 @@ class T2T {
     $b = array('*', '/', '_', '-');
     foreach($b as $c) {
       $q = preg_quote($c, '/');
-      $line =  preg_replace_callback("/($q){2}([^\s](?:.*?\\S)?\\1*)\\1\\1/", 
-        function($m) use ($that, $c) { return sprintf($that->snippets["$c$c"], $m[2]); }
-        , $line);
+      $line = preg_replace("/($q){2}([^\s](?:.*?\\S)?\\1*)\\1\\1/e", 
+        "sprintf(\$snippets['$c$c'], \$this->PSS('$2'))", $line);
     }
     return $line;
   }
@@ -700,20 +683,14 @@ class T2T {
     $this->outfile = $this->fileattr('-');
   }
   function run_macros($line) {
-    $that = $this;
-    $line =  preg_replace_callback('/%%(date|mtime)(\\((.+?)\\))?/i',  
-      function($m) use ($that) { return strftime($m[2]? $m[3]:"%Y%m%d", ($m[1]=='date'? $that->date : $that->mtime)); }
-      , $line);
-    $line =  preg_replace_callback('/%%infile(?:\\((.*?)\\))?/i', 
-      function($m) use ($that) { return $m[1] ? str_replace(array_keys($that->infile), array_values($that->infile), $m[1])
-      : $that->infile["%f"];}
-      , $line);
-    $line =  preg_replace_callback('/%%outfile(?:\\((.*?)\\))?/i', 
-      function($m) use ($that) { return $m[1] ? str_replace(array_keys($that->outfile), array_values($that->outfile), $m[1])
-      : $that->outfile["%f"]; }
-      , $line);
-    $line = preg_replace_callback('/%%rand\\(([0-9]+),([0-9]+)\\)/', 
-      function($m) { return rand($m[1], $m[2]); }, $line);
+    $line = preg_replace('/%%(date|mtime)(\\((.+?)\\))?/ie',  
+      'strftime("$2"? $this->PSS("$3"):"%Y%m%d", $this->$1)', $line);
+    $line = preg_replace('/%%infile(?:\\((.*?)\\))?/ie', 
+      '"$1" ? str_replace(array_keys($this->infile), array_values($this->infile), "$1")
+      : $this->infile["%f"]', $line);
+    $line = preg_replace('/%%outfile(?:\\((.*?)\\))?/ie', 
+      '"$1" ? str_replace(array_keys($this->outfile), array_values($this->outfile), "$1")
+      : $this->outfile["%f"]', $line);
     /*$line = preg_replace_callback('/%%rand\([0-9]+,[0-9]+\)/',  'create_function(return(rand($1,$2);))', $line);
      $line = preg_replace('/%%rand\([0-9]+,[0-9]+\)/i', '<? rand($1,$2); ?>', $line);
     $line = preg_replace_callback('/%%rand\\(([0-9]+),([0-9]+)\\)/',  'return(rand($1,$2);)', $line);
@@ -733,26 +710,26 @@ class T2T {
     switch($type{0}) {
       case '%': $type = $x = ''; return '';
       case "'": 
-    if ($this->enabletagged == 1) {
-      $y = $x; 
-      break;
-    }
-      
+		if ($this->enabletagged == 1) {
+			$y = $x; 
+			break;
+		}
+			
       case '"': # raw
-    if ($this->enableraw == 1) {
-      $y = $this->esc($x);
-      break;
-    }
+		if ($this->enableraw == 1) {
+			$y = $this->esc($x);
+			break;
+		}
       case '`': # verbatim, mono
-    if ($this->enableverbatim == 1) {
-      $s = $this->snippets;
-      $fmt = (strlen($type)==2) ? $s['mono'] : $s['verbatim'];
-      $y = sprintf($fmt, $this->esc($x));
-      break;
-    }
-    else {
-      $y = $this->esc($x);
-    }
+		if ($this->enableverbatim == 1) {
+			$s = $this->snippets;
+			$fmt = (strlen($type)==2) ? $s['mono'] : $s['verbatim'];
+			$y = sprintf($fmt, $this->esc($x));
+			break;
+		}
+		else {
+			$y = $this->esc($x);
+		}
     }
     $block = (strlen($type)==3) ? "\033\033" : '';
     $type = $x = '';
@@ -765,10 +742,7 @@ class T2T {
     return "\034\034{$this->KPCount}\034\034";
   }
   function Restore($x) { # recovers all hidden strings
-    $that = $this;
-    return  preg_replace_callback("/\034\034(\\d.*?)\034\034/",
-      function($m) use ($that) { return $that->KPV[$m[1]]; }
-      , $x);
+    return preg_replace("/\034\034(\\d.*?)\034\034/e", "\$this->KPV['\$1']", $x);
   }
   function sp($n){ # add spaces for nicer indented HTML source code
     return str_repeat($this->snippets['listindent'], $n);
@@ -811,9 +785,9 @@ class T2T {
     $R = array();
     $R['header'] = $R['config'] = $R['body'] = array();
     # headers 
-  if ($this->enableheaders == 0) {
-    $R['header'][0] = $R['header'][1] = $R['header'][2] = '';
-  }
+	if ($this->enableheaders == 0) {
+		$R['header'][0] = $R['header'][1] = $R['header'][2] = '';
+	}
     else if($lines[0]=='') {
       $R['header'][0] = $R['header'][1] = $R['header'][2] = '';
       array_shift($lines);
