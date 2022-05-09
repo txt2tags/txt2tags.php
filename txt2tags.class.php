@@ -300,7 +300,7 @@ class T2T {
         continue;
       }
       
-      if($line!='' && $line{0}=='%' && ! preg_match('/^%%(infile|outfile|date|mtime|rand|toc\\s*$)/i', $line) )
+      if($line!='' && $line[0]=='%' && ! preg_match('/^%%(infile|outfile|date|mtime|rand|toc\\s*$)/i', $line) )
         continue; # remove comment lines
         
       # special lines raw, tagged, verbatim
@@ -340,7 +340,7 @@ class T2T {
       # tables
       if(preg_match('/^ *(\\|\\|?) /', $line, $m)) {
         if(!$table) { # open table
-          $attr = ($line{0}==' ')? ' align="center"' : "";
+          $attr = ($line[0]==' ')? ' align="center"' : "";
           if(preg_match('/\\|\\s*$/', $line)) {
             $attr .=  ' border="1"';
           }
@@ -362,7 +362,7 @@ class T2T {
         for($i=1; $i<count($m); $i+=2){
           $c = $m[$i-1];
           $attr = '';
-          if($c && $c{0}==' ') {
+          if($c && $c[0]==' ') {
             $attr = (substr($c, -1)==' ') ? ' align="center"' : ' align="right"';
           }
           $span = strlen(trim($m[$i]));
@@ -611,7 +611,7 @@ class T2T {
     $line = $this->run_macros($line);
     
     # <[img]>
-    $imgrx = "\\[([\034\\w_,.+%$#@!?+~\\/-]+\\.(?:png|jpe?g|gif|bmp))\\]";
+    $imgrx = "\\[([\034\\w_,.+%$#@!?+~\\/\-]+\\.(?:png|jpe?g|gif|bmp))\\]";
     
     
     $that = $this;
@@ -632,7 +632,7 @@ class T2T {
       "{$PRT}[^\\s$UEX]+" =>'',
       "www\\d?\\.[^\\s$UEX]+" =>'http://', # lazy links
       "ftp\\d?\\.[^\\s$UEX]+" =>'ftp://',  # lazy links
-      "\\w[\\w.-]+@[\\w-.]+[^\\s$UEX]+" =>'mailto:',  # lazy links
+      "\\w[\\w.-]+@[\\w\-.]+[^\\s$UEX]+" =>'mailto:',  # lazy links
       ); #     
     }
     else {
@@ -640,7 +640,7 @@ class T2T {
       //"{$PRT}[^\\s$UEX]+" =>'',  # allows hotlinks by disabling this part
       //"www\\d?\\.[^\\s$UEX]+" =>'http://', # lazy links won't work here
       "ftp\\d?\\.[^\\s$UEX]+" =>'ftp://',  # lazy links
-      "\\w[\\w.-]+@[\\w-.]+[^\\s$UEX]+" =>'mailto:',  # lazy links
+      "\\w[\\w.-]+@[\\w\-.]+[^\\s$UEX]+" =>'mailto:',  # lazy links
       ); #  
   }
     
@@ -730,7 +730,7 @@ class T2T {
   }
   
   function closeRTV(&$type, &$x) { # Raw, Tagged or Verbadim lines/areas
-    switch($type{0}) {
+    switch($type[0]) {
       case '%': $type = $x = ''; return '';
       case "'": 
     if ($this->enabletagged == 1) {
@@ -835,14 +835,14 @@ class T2T {
       
       if(preg_match('/^%!\\s*includeconf\\s*:\\s*(.+)$/', $line, $m)) {
         $f = trim($m[1]);
-        if($f{0}!='/') $f =  $this->infile['%d'] . DIRECTORY_SEPARATOR . $f;
+        if($f[0]!='/') $f =  $this->infile['%d'] . DIRECTORY_SEPARATOR . $f;
         $r = $this->head_conf_body($this->read($f, $this->enableinclude));
         for($i=count($r['config'])-1; $i>=0; $i--)
           array_unshift($lines, $r['config'][$i]); 
         continue;
       }
       
-      if($line{0} != '%' || preg_match('/^%(%(date|mtime|toc|infile|outfile|rand)|! *include)/i', $line)) {
+      if($line[0] != '%' || preg_match('/^%(%(date|mtime|toc|infile|outfile|rand)|! *include)/i', $line)) {
         array_unshift($lines, $line); 
         break;
       }
@@ -863,12 +863,12 @@ class T2T {
       if(preg_match('/^%!\\s*include(?:\\(x?html\\))?\\s*:\\s*(``|\'\'|""|)(.+)\\1\\s*$/', $line, $m)) {
       
         $f = trim($m[2]);
-        if($f{0}!='/') $f =  $this->infile['%d'] . DIRECTORY_SEPARATOR . $f;
+        if($f[0]!='/') $f =  $this->infile['%d'] . DIRECTORY_SEPARATOR . $f;
         $r = $this->head_conf_body($this->read($f, $this->enableinclude));
       
         if($m[1]) {
           $q = implode("\n", $r['body'])."\n";
-          $type = str_repeat($m[1]{1}, 3);
+          $type = str_repeat($m[1][1], 3);
           $line = $this->closeRTV($type, $q);
         }
         else {
@@ -882,4 +882,4 @@ class T2T {
     return $R;
   }
 }
-
+?>
